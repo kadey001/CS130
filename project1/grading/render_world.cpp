@@ -3,6 +3,7 @@
 #include "object.h"
 #include "light.h"
 #include "ray.h"
+#include "numeric"
 
 extern bool disable_hierarchy;
 
@@ -22,12 +23,12 @@ Render_World::~Render_World()
 // to ensure that hit.dist>=small_t.
 Hit Render_World::Closest_Intersection(const Ray& ray)
 {
-    Hit closestHit;
-    closestHit.dist = LONG_MAX;
-    long min_t = LONG_MAX;//Large value set to min_t
+    Hit closestHit = {0,0,0};
+    Hit hit;
+    double min_t = std::numeric_limits<double>::max();//Large value set to min_t
     for(unsigned int i = 0; i < objects.size(); i++) {
-        Hit hit = objects[i]->Intersection(ray, 0);
-        if(hit.dist < min_t && hit.dist > small_t) {
+        hit = objects[i]->Intersection(ray, 0);
+        if(hit.dist < min_t && hit.dist >= small_t && hit.object) {
             closestHit = hit;
             min_t = hit.dist;
         }
@@ -39,11 +40,12 @@ Hit Render_World::Closest_Intersection(const Ray& ray)
 void Render_World::Render_Pixel(const ivec2& pixel_index)
 {
     Ray ray;
-    ray.direction = (camera.position - camera.World_Position(pixel_index)).normalized();
-    ray.endpoint = camera.position;
+    vec3 endPoint = camera.position;
+    ray.direction = (camera.World_Position(pixel_index) - endPoint).normalized();
+    ray.endpoint = endPoint;
 
     vec3 color=Cast_Ray(ray,1);
-    camera.Set_Pixel(pixel_index,Pixel_Color(color));
+    camera.Set_Pixel(pixel_index, Pixel_Color(color));
 }
 
 void Render_World::Render()
@@ -61,25 +63,24 @@ void Render_World::Render()
 vec3 Render_World::Cast_Ray(const Ray& ray,int recursion_depth)
 {
     vec3 color;
-    // determine the color here TODO
     Hit closestHit = Closest_Intersection(ray);
-    vec3 intersectionPoint = ray.endpoint;
-    vec3 norm = closestHit.object->Normal(intersectionPoint, closestHit.part);
+    
 
-    if(closestHit.dist < LONG_MAX) {//If thee is an intersection
+    if(closestHit.object != 0) {//If thee is an intersection
+        vec3 intersectionPoint = ray.Point(closestHit.dist);
+        vec3 norm = closestHit.object->Normal(intersectionPoint, 1);
         color = closestHit.object->material_shader->Shade_Surface(ray, intersectionPoint, norm, recursion_depth);
     } 
     else {
-        color = background_shader->Shade_Surface(ray, intersectionPoint, norm, recursion_depth);
+        color = background_shader->Shade_Surface(ray, ray.direction, ray.direction, recursion_depth);
     }
     return color;
 }
 
 void Render_World::Initialize_Hierarchy()
 {
-    TODO; // Fill in hierarchy.entries; there should be one entry for
+    //TODO; // Fill in hierarchy.entries; there should be one entry for
     // each part of each object.
-
-    hierarchy.Reorder_Entries();
-    hierarchy.Build_Tree();
+    //hierarchy.Reorder_Entries();
+    //hierarchy.Build_Tree();
 }

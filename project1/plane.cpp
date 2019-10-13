@@ -13,6 +13,7 @@ Hit Plane::Intersection(const Ray& ray, int part) const
     // if(denominator > 1e-5) {
     //     vec3 pointToPlane = x1 - ray.endpoint;
     // }
+    
     return {0,0,0};
 }
 

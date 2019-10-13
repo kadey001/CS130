@@ -6,12 +6,12 @@ Hit Sphere::Intersection(const Ray& ray, int part) const
 {
     vec3 L = center - ray.endpoint;//Get vector L from center to ray endpoint
     double tc = dot(L, ray.direction);//gets dot product of L and ray direction
-
     if(tc < 0)//If tc < 0 then the ray is pointing away from the sphere
         return {0,0,0};
-    
-    //Get the length of the line segment from center that is perpendicular to the ray
-    double d = sqrt((L.magnitude * L.magnitude) - (tc * tc));
+
+    //Get the length of the line segment from center to point p that is perpendicular to the ray
+    vec3 p = ray.Point(tc);
+    double d = (center - p).magnitude();
 
     if(d > radius)//Not touching the sphere if the d is greater than the raidus
         return {0,0,0};
@@ -20,25 +20,22 @@ Hit Sphere::Intersection(const Ray& ray, int part) const
     double tc1 = sqrt((radius * radius) - (d * d));
     double t1 = tc - tc1;
     double t2 = tc + tc1;
+    Hit hit;
 
-    Ray p1Ray = Ray(ray.endpoint, ray.direction);
-    Ray p2Ray = Ray(ray.endpoint, ray.direction);
+    if(t2 > t1) {
+        hit = {this, t1, 1};
+    }
+    else {
+        hit = {this, t2, 1};
+    }
 
-    //Get vectors to the intersections on the sphere
-    vec3 p1 = p1Ray.Point(t1);
-    vec3 p2 = p2Ray.Point(t2);
-    
-    Hit sphereIntersection;
-    sphereIntersection.object = this;
-    sphereIntersection.dist = (p1.magnitude > p2.magnitude) ? p1.magnitude : p2.magnitude;
-    sphereIntersection.part = part;
-    return sphereIntersection;
+    return hit;
 }
 
 vec3 Sphere::Normal(const vec3& point, int part) const
 {
-    vec3 normal;
-    TODO; // compute the normal direction
+    vec3 normal = point - center;
+    normal = normal.normalized();
     return normal;
 }
 
