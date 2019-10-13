@@ -23,7 +23,7 @@ Render_World::~Render_World()
 Hit Render_World::Closest_Intersection(const Ray& ray)
 {
     Hit closestHit;
-    closestHit.dist = __DBL_MAX__;
+    closestHit.dist = DBL_MAX;
     double min_t = 1e+200;//Large value set to min_t
     for(unsigned int i = 0; i < objects.size(); i++) {
         Hit hit = objects[i]->Intersection(ray, 0);
@@ -66,7 +66,7 @@ vec3 Render_World::Cast_Ray(const Ray& ray,int recursion_depth)
     vec3 intersectionPoint = ray.endpoint;
     vec3 norm = closestHit.object->Normal(intersectionPoint, closestHit.part);
 
-    if(closestHit.dist < __DBL_MAX__) {//If thee is an intersection
+    if(closestHit.dist < DBL_MAX) {//If thee is an intersection
         color = closestHit.object->material_shader->Shade_Surface(ray, intersectionPoint, norm, recursion_depth);
     } 
     else {
