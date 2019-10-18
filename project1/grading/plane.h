@@ -6,7 +6,7 @@
 class Plane : public Object
 {
 public:
-    vec3 x1;
+    vec3 x1;//Point on the plane
     vec3 normal;
 
     Plane(const vec3& point,const vec3& normal)

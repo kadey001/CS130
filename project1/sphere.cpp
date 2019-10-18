@@ -22,13 +22,11 @@ Hit Sphere::Intersection(const Ray& ray, int part) const
     double t2 = tc + tc1;
     Hit hit;
 
-    if(t2 > t1) {
+    if(t2 > t1) 
         hit = {this, t1, 1};
-    }
-    else {
+    else
         hit = {this, t2, 1};
-    }
-
+    
     return hit;
 }
 

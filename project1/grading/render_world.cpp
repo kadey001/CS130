@@ -64,7 +64,6 @@ vec3 Render_World::Cast_Ray(const Ray& ray,int recursion_depth)
 {
     vec3 color;
     Hit closestHit = Closest_Intersection(ray);
-    
 
     if(closestHit.object != 0) {//If thee is an intersection
         vec3 intersectionPoint = ray.Point(closestHit.dist);
@@ -81,6 +80,6 @@ void Render_World::Initialize_Hierarchy()
 {
     //TODO; // Fill in hierarchy.entries; there should be one entry for
     // each part of each object.
-    //hierarchy.Reorder_Entries();
-    //hierarchy.Build_Tree();
+    hierarchy.Reorder_Entries();
+    hierarchy.Build_Tree();
 }
