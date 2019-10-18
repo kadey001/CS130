@@ -4,23 +4,28 @@
 // Determine if the ray intersects with the sphere
 Hit Sphere::Intersection(const Ray& ray, int part) const
 {
-    vec3 L = center - ray.endpoint;//Get vector L from center to ray endpoint
-    double tc = dot(L, ray.direction);//gets dot product of L and ray direction
-    if(tc < 0)//If tc < 0 then the ray is pointing away from the sphere
-        return {0,0,0};
+    //vector from center to ray endpoint
+    vec3 L = center - ray.endpoint;
+    //product of L and ray direction
+    double tc = dot(L, ray.direction);
+    //Hit
+    Hit hit{0,0,0};
+
+    //If tc < 0 then the ray is pointing away from the sphere
+    if(tc < 0)
+        return hit;//Empty Hit
 
     //Get the length of the line segment from center to point p that is perpendicular to the ray
     vec3 p = ray.Point(tc);
     double d = (center - p).magnitude();
 
     if(d > radius)//Not touching the sphere if the d is greater than the raidus
-        return {0,0,0};
+        return hit;//Empty Hit
     
     //Calculate the points intersecting with the sphere
     double tc1 = sqrt((radius * radius) - (d * d));
     double t1 = tc - tc1;
     double t2 = tc + tc1;
-    Hit hit;
 
     if(t2 > t1) 
         hit = {this, t1, 1};

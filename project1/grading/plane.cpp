@@ -9,8 +9,8 @@
 Hit Plane::Intersection(const Ray& ray, int part) const
 {
     Hit hit{0, 0, -1};
-    
-    //Check if ray is perpendicular to plane. If it is then return empty hit.
+
+    //Check if ray is perpendicular to plane (check == 0). If it is then return empty hit.
     double check = dot(ray.direction, normal);
     if(!check) {
         return hit;
