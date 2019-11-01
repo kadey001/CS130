@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <limits>
+#include "plane.h"
 
 // Consider a triangle to intersect a ray if the ray intersects the plane of the
 // triangle with barycentric weights in [-weight_tolerance, 1+weight_tolerance]
@@ -42,16 +43,47 @@ void Mesh::Read_Obj(const char* file)
 // Check for an intersection against the ray.  See the base class for details.
 Hit Mesh::Intersection(const Ray& ray, int part) const
 {
-    TODO;
-    return {};
+    Hit hit = {0, std::numeric_limits<double>::max(), -1};
+    
+    if (part >= 0)
+    {
+        if(Intersect_Triangle(ray,part,hit.dist))
+        {
+            hit.object = this;
+            hit.part = part;
+        }
+    }
+    else
+    {
+        for(unsigned i = 0; i < triangles.size(); i++)
+        {
+            double temp = 0;
+            if (Intersect_Triangle(ray,i,temp))
+            {
+                if(temp < hit.dist)
+                {
+                    hit.object = this;
+                    hit.dist = temp;
+                    hit.part = i;
+                }   
+            }
+        }
+    }
+    return hit;
 }
 
 // Compute the normal direction for the triangle with index part.
 vec3 Mesh::Normal(const vec3& point, int part) const
 {
-    assert(part>=0);
-    TODO;
-    return vec3();
+    assert(part >= 0);
+    
+    //Get each vertex and take the cross product of 
+    //two sides to find the normal.
+    vec3 A = vertices[triangles[part][0]];
+    vec3 B = vertices[triangles[part][1]];
+    vec3 C = vertices[triangles[part][2]];
+    
+    return cross((B-A),(C-A)).normalized();
 }
 
 // This is a helper routine whose purpose is to simplify the implementation
@@ -68,8 +100,17 @@ vec3 Mesh::Normal(const vec3& point, int part) const
 // two triangles.
 bool Mesh::Intersect_Triangle(const Ray& ray, int tri, double& dist) const
 {
-    TODO;
-    return false;
+    vec3 A = vertices[triangles[tri][0]];
+    vec3 B = vertices[triangles[tri][1]];
+    vec3 C = vertices[triangles[tri][2]];
+    
+    Hit hit = Plane(A, Normal(B, tri)).Intersection(ray, tri);
+    if (hit.object == 0)
+    {
+        return false;
+    }
+    
+    
 }
 
 // Compute the bounding box.  Return the bounding box of only the triangle whose

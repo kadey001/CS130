@@ -37,9 +37,9 @@ vec3 Phong_Shader::Shade_Surface(const Ray& ray,const vec3& intersection_point,
             }
         }
         //Diffuse vector
-        diffuse = emitted_light * color_diffuse * max(dot(normal, L.normalized()), (double) 0);
+        diffuse = emitted_light * color_diffuse * max(dot(normal, L.normalized()), 0.0);
         //Specular vector
-        specular = emitted_light * color_specular * pow(max(dot(R, -ray.direction), (double) 0), specular_power);
+        specular = emitted_light * color_specular * pow(max(dot(R, -ray.direction), 0.0), specular_power);
         //Update color with diffuse and specular lighting
         color += (diffuse + specular);
     }

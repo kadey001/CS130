@@ -14,11 +14,10 @@ Shade_Surface(const Ray& ray,const vec3& intersection_point,
     Ray reflection_ray(intersection_point, reflection_direction);
 
     //Check recursion depth and cast reflected ray if depth limit is not yet reached
-    //return color otherwise
     if(recursion_depth != world.recursion_depth_limit) {
         color += (reflectivity * world.Cast_Ray(reflection_ray, recursion_depth + 1));
         return color;
-    } else {
-        return color;
     }
+
+    return color;
 }
