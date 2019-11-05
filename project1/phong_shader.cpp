@@ -7,7 +7,6 @@
 vec3 Phong_Shader::Shade_Surface(const Ray& ray,const vec3& intersection_point, 
     const vec3& normal,int recursion_depth) const
 {
-    //TODO Ambient lighting
     vec3 color, diffuse, specular;
     color = specular = world.ambient_color * world.ambient_intensity * color_ambient;
 
