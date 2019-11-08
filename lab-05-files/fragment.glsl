@@ -4,7 +4,7 @@ varying vec4 position;
 
 void main()
 {
-    vec4 tex_color = texture2D(tex, gl_TexCoord[0].st);
+    vec3 tex_color = texture2D(tex, gl_TexCoord[0].st);
     vec3 diff = vec3(gl_LightSource[0].position - position);
     vec3 L = normalize(diff);
     vec3 normal = normalize(N);

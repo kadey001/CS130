@@ -96,16 +96,16 @@ GLuint loadTarga(const char* filename)
     GLenum target = GL_TEXTURE_2D;
     
     //TODO
-    texture_id = glGenTextures(1, data);
+    glGenTextures(1, &texture_id);
     
     glBindTexture(target, texture_id);
     
-    glTexParameter(target, texture_id, GL_TEXTURE_MAG_FILTER);
-    glTexParameter(target, texture_id, GL_TEXTURE_MIN_FILTER);
-    glTexParameter(target, texture_id, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameter(target, texture_id, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    glTexImage2D(target, 0, GL_RGBA, width, height, 0, GL_RGBA, UNSIGNED_BYTE, data);
+    glTexImage2D(target, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
     return texture_id;
 }
