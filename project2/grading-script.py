@@ -4,7 +4,7 @@
 
 import os,re,sys,shutil,random,subprocess,threading
 
-test_dir=sys.argv[1]
+test_dir='./'
 
 # Set up scratch space for grading
 dir="grading"

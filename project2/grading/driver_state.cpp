@@ -17,10 +17,10 @@ driver_state::~driver_state()
 // are not known when this class is constructed.
 void initialize_render(driver_state& state, int width, int height)
 {
-    state.image_width = width;
-    state.image_height = height;
-    state.image_color = new pixel[width * height];
-    state.image_depth = 0;
+    state.image_width=width;
+    state.image_height=height;
+    state.image_color= new pixel[width * height];
+    state.image_depth=0;
     for(size_t i = 0; i < width * height; i++) {
         state.image_color[i] = make_pixel(0,0,0);
     }
@@ -39,8 +39,6 @@ void render(driver_state& state, render_type type)
     switch(type) {
         case render_type::triangle: {
             data_geometry* triangle_geometry = new data_geometry[3];
-            //If the render is a triangle, the number of triangles should be
-            //The number of verticies divided by 3.
             state.num_triangles = state.num_vertices / 3;
             int index = 0;
             //std::cout << state.num_triangles << std::endl;
@@ -111,44 +109,15 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
         geometry_d[i] = (*in)[i];
         state.vertex_shader(vertex_d[i], geometry_d[i], state.uniform_data);
     }
-    //TODO Figiure out how to get w in order to divide coordinates
 
     float x0 = *((*in)[0].data);
-    float x1 = *((*in)[1].data);
-    float x2 = *((*in)[2].data);
-    float x[] = {x0, x1, x2};
+    int width = state.image_width;
+    float x = x0 / width;
 
-    float y0 = *((*in)[0].data + 1);
-    float y1 = *((*in)[1].data + 1);
-    float y2 = *((*in)[2].data + 1);
-    float y[] = {y0, y1, y2};
-
-    float z0 = *((*in)[0].data + 2);
-    float z1 = *((*in)[1].data + 2);
-    float z2 = *((*in)[2].data + 2);
-    float z[] = {z0, z1, z2};
-
-    std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
-    std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
-    std::cout << "Z:" << z0 << " " << z1 << " " << z2 << std::endl;
-
-    int w = state.image_width;
-    int h = state.image_height;
-    int pixel_x[3], pixel_y[3];
-    int i, j;
-    int middle_h = (int)h/2;
-    int middle_w = (int)w/2;
-    
-    for(size_t iter = 0; iter < 3; iter++) {
-        i = (int)(middle_w * x[iter] + middle_w - .5);
-        j = (int)(middle_h * y[iter] + middle_h - .5);
-        pixel_x[iter] = i;
-        pixel_y[iter] = j;
-        state.image_color[i + j * w] = make_pixel(100, 255, 255);
-    }
-    // int i = (int)(middle_w * x0 + middle_w - .5);
-    // int j = (int)(middle_h * y0 + middle_h - .5);
-    // state.image_color[i + j * w] = make_pixel(255,255,255);
+    std::cout << x0 << " " << x << " " << width << std::endl;
+    // float w0 = in[1]->gl_Position[3];
+    // float x1 = in[1]->gl_Position[0] / w0;
+    // std::cout << x1 << std::endl;
 
     std::cout<<"TODO: implement rasterization"<<std::endl;
 }
