@@ -44,24 +44,19 @@ void render(driver_state& state, render_type type)
             state.num_triangles = state.num_vertices / 3;
             int index = 0;
             //std::cout << state.num_triangles << std::endl;
-            //For each vertex, set data_geometry data pointer to first entry of the
-            //vertex data, allowing the x,y coordinates to be found for each vertex 
-            //by looking at next location in memory.
+            //For each triangle, copy each vertex by setting data_geometry data pointer 
+            //to the first entry of the vertex data, allowing the x,y coordinates to be 
+            //found for each vertex by looking at next location in memory.
             for(size_t triangle = 0; triangle < state.num_triangles; triangle++) {
                 for(size_t i = 0; i < 3; i++) {
                     //std::cout << *(state.vertex_data + index) << std::endl;
                     triangle_geometry[i].data = state.vertex_data + index;
                     //std::cout << *triangle_geometry[j].data << std::endl;
                     index += state.floats_per_vertex;
+                    
                 }
+                rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
             }
-
-            // for(size_t i = 0; i < 3; i++) {
-            //     for(size_t j = 0; j < 3; j++) {
-            //         std::cout << *(triangle_geometry[i].data + j) << std::endl;
-            //     }
-            // }
-            rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
             break;
         }
         case render_type::indexed: {
@@ -103,7 +98,6 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     //How to access vertex data:
     //Find pointer to data from: (*in)[vertex].data + (0 for x axis, 1 for y axis)
     //Must dereference address to get values
-    //std::cout << "Raster:" << *((*in)[1].data + 0) << std::endl;
     data_vertex vertex_d[3];
     data_geometry geometry_d[3];
     for(size_t i = 0; i < 3; i++) {
@@ -111,26 +105,31 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
         geometry_d[i] = (*in)[i];
         state.vertex_shader(vertex_d[i], geometry_d[i], state.uniform_data);
     }
-    //TODO Figiure out how to get w in order to divide coordinates
+    //Get the w values for each vertex from geometry_d
+    float w0 = geometry_d[0].gl_Position[3];
+    float w1 = geometry_d[1].gl_Position[3];
+    float w2 = geometry_d[2].gl_Position[3];
+    //std::cout << w0 << w1 << w2 << std::endl;
 
-    float x0 = *((*in)[0].data);
-    float x1 = *((*in)[1].data);
-    float x2 = *((*in)[2].data);
+    //Get each vertex coordinates divided by respective w
+    float x0 = geometry_d[0].gl_Position[0] / w0;
+    float x1 = geometry_d[1].gl_Position[0] / w1;
+    float x2 = geometry_d[2].gl_Position[0] / w2;
     float x[] = {x0, x1, x2};
 
-    float y0 = *((*in)[0].data + 1);
-    float y1 = *((*in)[1].data + 1);
-    float y2 = *((*in)[2].data + 1);
+    float y0 = geometry_d[0].gl_Position[1] / w0;
+    float y1 = geometry_d[1].gl_Position[1] / w1;
+    float y2 = geometry_d[2].gl_Position[1] / w2;
     float y[] = {y0, y1, y2};
 
-    float z0 = *((*in)[0].data + 2);
-    float z1 = *((*in)[1].data + 2);
-    float z2 = *((*in)[2].data + 2);
-    //float z[] = {z0, z1, z2};
+    float z0 = geometry_d[0].gl_Position[2] / w0;
+    float z1 = geometry_d[0].gl_Position[2] / w1;
+    float z2 = geometry_d[0].gl_Position[2] / w2;
+    float z[] = {z0, z1, z2};
 
-    std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
-    std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
-    std::cout << "Z:" << z0 << " " << z1 << " " << z2 << std::endl;
+    //std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
+    //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
+    //std::cout << "Z:" << z0 << " " << z1 << " " << z2 << std::endl;
 
     int w = state.image_width;
     int h = state.image_height;
@@ -202,10 +201,6 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
         }
     }
 
-    // int i = (int)(middle_w * x0 + middle_w - .5);
-    // int j = (int)(middle_h * y0 + middle_h - .5);
-    // state.image_color[i + j * w] = make_pixel(255,255,255);
-
-    std::cout<<"TODO: implement rasterization"<<std::endl;
+    //std::cout<<"TODO: implement rasterization"<<std::endl;
 }
 
