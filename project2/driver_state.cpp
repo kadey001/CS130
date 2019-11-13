@@ -24,7 +24,7 @@ void initialize_render(driver_state& state, int width, int height)
     for(size_t i = 0; i < width * height; i++) {
         state.image_color[i] = make_pixel(0,0,0);
     }
-    std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
+    //std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
 }
 
 // This function will be called to render the data that has been stored in this class.
@@ -72,7 +72,7 @@ void render(driver_state& state, render_type type)
             std::cout << "Invalid Type" << std::endl;
         }
     }
-    std::cout<<"TODO: implement rendering."<<std::endl;
+    //std::cout<<"TODO: implement rendering."<<std::endl;
 }
 
 // This function clips a triangle (defined by the three vertices in the "in" array).
@@ -172,6 +172,8 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 
     //Calculate area of triangle to use barycentric coordinates
     //Area(abc) = .5 * ((BxCy - CxBy)-(AxCy - CxAy)-(AxBy - BxAy))
+    //Broke up into parts and used enum for readability.
+    //(Parts also useful in barycentric coordinate calculations)
     enum {a, b, c};
     float part1 = (pixel_x[b] * pixel_y[c]) - (pixel_x[c] * pixel_y[b]);
     float part2 = (pixel_x[a] * pixel_y[c]) - (pixel_x[c] * pixel_y[a]);

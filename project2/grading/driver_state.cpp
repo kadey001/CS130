@@ -24,7 +24,7 @@ void initialize_render(driver_state& state, int width, int height)
     for(size_t i = 0; i < width * height; i++) {
         state.image_color[i] = make_pixel(0,0,0);
     }
-    std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
+    //std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
 }
 
 // This function will be called to render the data that has been stored in this class.
@@ -44,10 +44,9 @@ void render(driver_state& state, render_type type)
             state.num_triangles = state.num_vertices / 3;
             int index = 0;
             //std::cout << state.num_triangles << std::endl;
-            //For each vertex, set data_geometry data pointer to first entry of the
-            //vertex data, allowing the x,y coordinates to be found for each vertex 
-            //by looking at next location in memory.
-            //Fix so triangle geometry handles more than one triangle.
+            //For each triangle, copy each vertex by setting data_geometry data pointer 
+            //to the first entry of the vertex data, allowing the x,y coordinates to be 
+            //found for each vertex by looking at next location in memory.
             for(size_t triangle = 0; triangle < state.num_triangles; triangle++) {
                 for(size_t i = 0; i < 3; i++) {
                     //std::cout << *(state.vertex_data + index) << std::endl;
@@ -58,13 +57,6 @@ void render(driver_state& state, render_type type)
                 }
                 rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
             }
-
-            // for(size_t i = 0; i < 3; i++) {
-            //     for(size_t j = 0; j < 3; j++) {
-            //         std::cout << *(triangle_geometry[i].data + j) << std::endl;
-            //     }
-            // }
-            //rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
             break;
         }
         case render_type::indexed: {
@@ -80,7 +72,7 @@ void render(driver_state& state, render_type type)
             std::cout << "Invalid Type" << std::endl;
         }
     }
-    std::cout<<"TODO: implement rendering."<<std::endl;
+    //std::cout<<"TODO: implement rendering."<<std::endl;
 }
 
 // This function clips a triangle (defined by the three vertices in the "in" array).
@@ -133,7 +125,7 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float z0 = geometry_d[0].gl_Position[2] / w0;
     float z1 = geometry_d[0].gl_Position[2] / w1;
     float z2 = geometry_d[0].gl_Position[2] / w2;
-    //float z[] = {z0, z1, z2};
+    float z[] = {z0, z1, z2};
 
     //std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
     //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
@@ -180,6 +172,8 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 
     //Calculate area of triangle to use barycentric coordinates
     //Area(abc) = .5 * ((BxCy - CxBy)-(AxCy - CxAy)-(AxBy - BxAy))
+    //Broke up into parts and used enum for readability.
+    //(Parts also useful in barycentric coordinate calculations)
     enum {a, b, c};
     float part1 = (pixel_x[b] * pixel_y[c]) - (pixel_x[c] * pixel_y[b]);
     float part2 = (pixel_x[a] * pixel_y[c]) - (pixel_x[c] * pixel_y[a]);
@@ -208,10 +202,6 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
             }
         }
     }
-
-    // int i = (int)(middle_w * x0 + middle_w - .5);
-    // int j = (int)(middle_h * y0 + middle_h - .5);
-    // state.image_color[i + j * w] = make_pixel(255,255,255);
 
     //std::cout<<"TODO: implement rasterization"<<std::endl;
 }
