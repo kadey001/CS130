@@ -126,7 +126,7 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float z0 = *((*in)[0].data + 2);
     float z1 = *((*in)[1].data + 2);
     float z2 = *((*in)[2].data + 2);
-    float z[] = {z0, z1, z2};
+    //float z[] = {z0, z1, z2};
 
     std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
     std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
@@ -136,16 +136,72 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     int h = state.image_height;
     int pixel_x[3], pixel_y[3];
     int i, j;
-    int middle_h = (int)h/2;
     int middle_w = (int)w/2;
+    int middle_h = (int)h/2;
     
     for(size_t iter = 0; iter < 3; iter++) {
         i = (int)(middle_w * x[iter] + middle_w - .5);
         j = (int)(middle_h * y[iter] + middle_h - .5);
         pixel_x[iter] = i;
         pixel_y[iter] = j;
-        state.image_color[i + j * w] = make_pixel(100, 255, 255);
+        //state.image_color[i + j * w] = make_pixel(255, 255, 255);
     }
+
+    //Find the mins and maxes of triangle to check if it's in bounds and to reduce
+    //pixels to check when rendering triangle.
+    float minimum_x = std::min(pixel_x[0], std::min(pixel_x[1], pixel_x[2]));
+    float maximum_x = std::max(pixel_x[0], std::max(pixel_x[1], pixel_x[2]));
+    float minimum_y = std::min(pixel_y[0], std::min(pixel_y[1], pixel_y[2]));
+    float maximum_y = std::max(pixel_y[0], std::max(pixel_y[1], pixel_y[2]));
+    
+    //Check to make sure that triangle is in bounds using max and min verticies
+    //If the minimum vertex is less than zero or the maximum vertex is larger than
+    //it's coresponding dimention then it is out of bounds and we need to set it to
+    //zero;
+    if(minimum_x < 0){
+        minimum_x = 0;
+    }
+    if(maximum_x > w){
+        maximum_x = w;
+    }
+    if(minimum_y < 0){
+        minimum_y = 0;
+    }
+    if(maximum_y > h){
+        maximum_y = h;
+    }
+
+    //Calculate area of triangle to use barycentric coordinates
+    //Area(abc) = .5 * ((BxCy - CxBy)-(AxCy - CxAy)-(AxBy - BxAy))
+    enum {a, b, c};
+    float part1 = (pixel_x[b] * pixel_y[c]) - (pixel_x[c] * pixel_y[b]);
+    float part2 = (pixel_x[a] * pixel_y[c]) - (pixel_x[c] * pixel_y[a]);
+    float part3 = (pixel_x[a] * pixel_y[b]) - (pixel_x[b] * pixel_y[a]);
+    float triangle_area = .5 * (part1 - part2 - part3);
+    //std::cout << triangle_area << std::endl;
+
+    float alpha, beta, gamma;
+
+    //std::cout << "X:" << minimum_x << maximum_x << std::endl;
+    //std::cout << "Y:" << minimum_y << maximum_y << std::endl;
+
+    //Find the barycentric coords for each pixel in the area of the triangle. If the coordinate is inside
+    //the triangle then we update the color, otherwise leave it black.
+    //We only need to check from the minimum x,y pixels to maximum x,y pixels since we know the triangle is in this area.
+    for(int i = minimum_x; i < maximum_x; i++) {
+        for(int j = minimum_y; j < maximum_y; j++) {
+            alpha = (.5 * (part1 + (pixel_y[b] - pixel_y[c]) * i + (pixel_x[c] - pixel_x[b]) * j)/triangle_area);
+            beta = (.5 * (((pixel_x[c] * pixel_y[a]) - (pixel_x[a] * pixel_y[c])) + (pixel_y[c] - pixel_y[a]) * i + (pixel_x[a] - pixel_x[c]) * j)/triangle_area);
+            gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j)/triangle_area);
+
+            //std::cout << alpha << beta << gamma << std::endl;
+
+            if(alpha >= 0 && beta >= 0 && gamma >= 0) {
+                state.image_color[i + j * w] = make_pixel(255,255,255);
+            }
+        }
+    }
+
     // int i = (int)(middle_w * x0 + middle_w - .5);
     // int j = (int)(middle_h * y0 + middle_h - .5);
     // state.image_color[i + j * w] = make_pixel(255,255,255);
