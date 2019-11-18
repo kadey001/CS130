@@ -20,9 +20,10 @@ void initialize_render(driver_state& state, int width, int height)
     state.image_width = width;
     state.image_height = height;
     state.image_color = new pixel[width * height];
-    state.image_depth = 0;
+    state.image_depth = new float[width * height];
     for(size_t i = 0; i < width * height; i++) {
         state.image_color[i] = make_pixel(0,0,0);
+        state.image_depth[i] = 1;
     }
     //std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
 }
@@ -100,9 +101,11 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     //Must dereference address to get values
     data_vertex vertex_d[3];
     data_geometry geometry_d[3];
+    
     for(size_t i = 0; i < 3; i++) {
         vertex_d[i].data = (*in)[i].data;
         geometry_d[i] = (*in)[i];
+
         state.vertex_shader(vertex_d[i], geometry_d[i], state.uniform_data);
     }
     //Get the w values for each vertex from geometry_d
@@ -122,10 +125,10 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float y2 = geometry_d[2].gl_Position[1] / w2;
     float y[] = {y0, y1, y2};
 
-    float z0 = geometry_d[0].gl_Position[2] / w0;
-    float z1 = geometry_d[0].gl_Position[2] / w1;
-    float z2 = geometry_d[0].gl_Position[2] / w2;
-    float z[] = {z0, z1, z2};
+    // float z0 = geometry_d[0].gl_Position[2] / w0;
+    // float z1 = geometry_d[0].gl_Position[2] / w1;
+    // float z2 = geometry_d[0].gl_Position[2] / w2;
+    // float z[] = {z0, z1, z2};
 
     //std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
     //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
@@ -148,15 +151,15 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 
     //Find the mins and maxes of triangle to check if it's in bounds and to reduce
     //pixels to check when rendering triangle.
-    float minimum_x = std::min(pixel_x[0], std::min(pixel_x[1], pixel_x[2]));
-    float maximum_x = std::max(pixel_x[0], std::max(pixel_x[1], pixel_x[2]));
-    float minimum_y = std::min(pixel_y[0], std::min(pixel_y[1], pixel_y[2]));
-    float maximum_y = std::max(pixel_y[0], std::max(pixel_y[1], pixel_y[2]));
+    int minimum_x = std::min(pixel_x[0], std::min(pixel_x[1], pixel_x[2]));
+    int maximum_x = std::max(pixel_x[0], std::max(pixel_x[1], pixel_x[2]));
+    int minimum_y = std::min(pixel_y[0], std::min(pixel_y[1], pixel_y[2]));
+    int maximum_y = std::max(pixel_y[0], std::max(pixel_y[1], pixel_y[2]));
     
     //Check to make sure that triangle is in bounds using max and min verticies
     //If the minimum vertex is less than zero or the maximum vertex is larger than
     //it's coresponding dimention then it is out of bounds and we need to set it to
-    //zero;
+    //zero or the corresponding maximum image width/height.
     if(minimum_x < 0){
         minimum_x = 0;
     }
@@ -178,13 +181,13 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float part1 = (pixel_x[b] * pixel_y[c]) - (pixel_x[c] * pixel_y[b]);
     float part2 = (pixel_x[a] * pixel_y[c]) - (pixel_x[c] * pixel_y[a]);
     float part3 = (pixel_x[a] * pixel_y[b]) - (pixel_x[b] * pixel_y[a]);
-    float triangle_area = .5 * (part1 - part2 - part3);
+    float triangle_area = .5 * (part1 - part2 + part3);
     //std::cout << triangle_area << std::endl;
 
     float alpha, beta, gamma;
 
     //std::cout << "X:" << minimum_x << maximum_x << std::endl;
-    //std::cout << "Y:" << minimum_y << maximum_y << std::endl;
+    //std::cout << "Y:" << minimum_y << maximum_y << std::endl;    
 
     //Find the barycentric coords for each pixel in the area of the triangle. If the coordinate is inside
     //the triangle then we update the color, otherwise leave it black.
@@ -193,12 +196,45 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
         for(int j = minimum_y; j < maximum_y; j++) {
             alpha = (.5 * (part1 + (pixel_y[b] - pixel_y[c]) * i + (pixel_x[c] - pixel_x[b]) * j)/triangle_area);
             beta = (.5 * (((pixel_x[c] * pixel_y[a]) - (pixel_x[a] * pixel_y[c])) + (pixel_y[c] - pixel_y[a]) * i + (pixel_x[a] - pixel_x[c]) * j)/triangle_area);
-            gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j)/triangle_area);
-
-            //std::cout << alpha << beta << gamma << std::endl;
+            gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j)/triangle_area);            
 
             if(alpha >= 0 && beta >= 0 && gamma >= 0) {
-                state.image_color[i + j * w] = make_pixel(255,255,255);
+                data_fragment fragment_d;
+                fragment_d.data = new float[MAX_FLOATS_PER_VERTEX];
+                data_output output_d;
+                float temp;
+
+                for (int k = 0; k < state.floats_per_vertex; k++) {
+                    switch (state.interp_rules[k]) {
+                        case interp_type::flat:
+                            fragment_d.data[k] = geometry_d[0].data[k];
+                            break;
+
+                        case interp_type::noperspective:
+                            fragment_d.data[k] = (
+                                alpha * geometry_d[0].data[k] + 
+                                beta * geometry_d[1].data[k] + 
+                                gamma * geometry_d[2].data[k]
+                            );
+                            break;
+
+                        // case interp_type::smooth:
+                        //     temp = (alpha / w0 + beta / w1 + gamma / w2);
+
+                        //     alpha = alpha / temp / w0;
+                        //     beta = beta / temp / w1;
+                        //     gamma = gamma / temp / w2;
+
+                        //     fragment_d.data[k] = alpha * geometry_d[0].data[k] + beta * geometry_d[1].data[k] + gamma * geometry_d[2].data[k];
+                        //     break;
+
+                        default:
+                            break;
+                    }
+                }
+                state.fragment_shader(fragment_d, output_d, state.uniform_data);
+
+                state.image_color[i + j * w] = make_pixel(output_d.output_color[0] * 255, output_d.output_color[1] * 255, output_d.output_color[2] * 255);
             }
         }
     }
