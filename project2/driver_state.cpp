@@ -40,6 +40,8 @@ void render(driver_state& state, render_type type)
     switch(type) {
         case render_type::triangle: {
             data_geometry* triangle_geometry = new data_geometry[3];
+            data_geometry geometry_d[3];
+            data_vertex vertex_d[3];
             //If the render is a triangle, the number of triangles should be
             //The number of verticies divided by 3.
             state.num_triangles = state.num_vertices / 3;
@@ -52,11 +54,17 @@ void render(driver_state& state, render_type type)
                 for(size_t i = 0; i < 3; i++) {
                     //std::cout << *(state.vertex_data + index) << std::endl;
                     triangle_geometry[i].data = state.vertex_data + index;
-                    //std::cout << *triangle_geometry[j].data << std::endl;
+                    vertex_d[i].data = triangle_geometry[i].data;
+                    //std::cout << *triangle_geometry[i].data << std::endl;
+
+                    //Fill gl_Position for the triangle geometry allowing it to be accessed while clipping
+                    state.vertex_shader(vertex_d[i], triangle_geometry[i], state.uniform_data);
+                    //std::cout << triangle_geometry[i].gl_Position << std::endl;
+
                     index += state.floats_per_vertex;
-                    
                 }
-                rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
+                //rasterize_triangle(state, (const data_geometry**)&triangle_geometry);
+                clip_triangle(state, (const data_geometry**)&triangle_geometry, 0);
             }
             break;
         }
@@ -82,12 +90,69 @@ void render(driver_state& state, render_type type)
 // simply pass the call on to rasterize_triangle.
 void clip_triangle(driver_state& state, const data_geometry* in[3],int face)
 {
-    if(face==6)
+    //TODO Finish triangle clipping
+    data_geometry geometry_d[3] = {(*in)[0], (*in)[1], (*in)[2]};
+    vec4 A = geometry_d[0].gl_Position;
+    vec4 B = geometry_d[1].gl_Position;
+    vec4 C = geometry_d[2].gl_Position;
+    enum {x, y, z, w};
+    
+    switch (face)
     {
+    case 0:
+        //Left
+        // std::cout << A << std::endl;
+        // std::cout << B << std::endl;
+        // std::cout << C << std::endl;
+        if(A[x] > -1 && B[x] > -1 && C[x] > -1) {
+            //No clipping needed for left face
+            break;
+        } else {
+            //Need to clip the left face
+
+        }
+        break;
+    case 1:
+        //Right
+        if(A[x] < 1 && B[x] < 1 && C[x] < 1) {
+            //No clipping needed for right face
+            break;
+        } else {
+            //Need to clip the right face
+            
+        }
+        break;
+    case 2:
+        //Top
+        if(A[y] < 1 && B[y] < 1 && C[y] < 1) {
+            //No clipping needed for top face
+            break;
+        } else {
+            //Need to clip the top face
+            
+        }
+        break;
+    case 3:
+        //Bottom
+        if(A[y] > -1 && B[y] > -1 && C[y] > -1) {
+            //No clipping needed for bottom face
+            break;
+        } else {
+            //Need to clip the bottom face
+            
+        }
+        break;
+    case 4:
+        //Front
+        break;
+    case 5:
+        //Back
+        break;
+    default:
         rasterize_triangle(state, in);
         return;
     }
-    std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
+    //std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
     clip_triangle(state,in,face+1);
 }
 
@@ -99,15 +164,10 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     //How to access vertex data:
     //Find pointer to data from: (*in)[vertex].data + (0 for x axis, 1 for y axis)
     //Must dereference address to get values
-    data_vertex vertex_d[3];
-    data_geometry geometry_d[3];
-    
-    for(size_t i = 0; i < 3; i++) {
-        vertex_d[i].data = (*in)[i].data;
-        geometry_d[i] = (*in)[i];
 
-        state.vertex_shader(vertex_d[i], geometry_d[i], state.uniform_data);
-    }
+    //Fill geometry_d with in for easier use/readability
+    data_geometry geometry_d[3] = {(*in)[0], (*in)[1], (*in)[2]};
+
     //Get the w values for each vertex from geometry_d
     float w0 = geometry_d[0].gl_Position[3];
     float w1 = geometry_d[1].gl_Position[3];
@@ -125,10 +185,10 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float y2 = geometry_d[2].gl_Position[1] / w2;
     float y[] = {y0, y1, y2};
 
-    // float z0 = geometry_d[0].gl_Position[2] / w0;
-    // float z1 = geometry_d[0].gl_Position[2] / w1;
-    // float z2 = geometry_d[0].gl_Position[2] / w2;
-    // float z[] = {z0, z1, z2};
+    float z0 = geometry_d[0].gl_Position[2] / w0;
+    float z1 = geometry_d[1].gl_Position[2] / w1;
+    float z2 = geometry_d[2].gl_Position[2] / w2;
+    float z[] = {z0, z1, z2};
 
     //std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
     //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
@@ -138,8 +198,8 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     int h = state.image_height;
     int pixel_x[3], pixel_y[3];
     int i, j;
-    int middle_w = (int)w/2;
-    int middle_h = (int)h/2;
+    float middle_w = w/2;
+    float middle_h = h/2;
     
     for(size_t iter = 0; iter < 3; iter++) {
         i = (int)(middle_w * x[iter] + middle_w - .5);
@@ -192,13 +252,18 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     //Find the barycentric coords for each pixel in the area of the triangle. If the coordinate is inside
     //the triangle then we update the color, otherwise leave it black.
     //We only need to check from the minimum x,y pixels to maximum x,y pixels since we know the triangle is in this area.
+    //Interpolate points within the triangle based on interp_rules.
     for(int i = minimum_x; i < maximum_x; i++) {
         for(int j = minimum_y; j < maximum_y; j++) {
-            alpha = (.5 * (part1 + (pixel_y[b] - pixel_y[c]) * i + (pixel_x[c] - pixel_x[b]) * j)/triangle_area);
-            beta = (.5 * (((pixel_x[c] * pixel_y[a]) - (pixel_x[a] * pixel_y[c])) + (pixel_y[c] - pixel_y[a]) * i + (pixel_x[a] - pixel_x[c]) * j)/triangle_area);
-            gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j)/triangle_area);            
+            alpha = (.5 * (part1 + (pixel_y[b] - pixel_y[c]) * i + (pixel_x[c] - pixel_x[b]) * j) / triangle_area);
+            beta = (.5 * (((pixel_x[c] * pixel_y[a]) - (pixel_x[a] * pixel_y[c])) + (pixel_y[c] - pixel_y[a]) * i + (pixel_x[a] - pixel_x[c]) * j) / triangle_area);
+            gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j) / triangle_area); 
 
-            if(alpha >= 0 && beta >= 0 && gamma >= 0) {
+            //Find depth for Z-Buffering
+            float depth = (alpha * z[a]) + (beta * z[b]) + (gamma * z[c]);
+
+            //Only render pixel when the point is inside of the triangle and 
+            if(alpha > 0 && beta > 0 && gamma > 0 && state.image_depth[i + j * w] > depth) {
                 data_fragment fragment_d;
                 data_output output_d;
                 fragment_d.data = new float[MAX_FLOATS_PER_VERTEX];
@@ -208,24 +273,28 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
                     switch (state.interp_rules[k]) {
                         case interp_type::flat:
                             //Flat fragment shader
-                            fragment_d.data[k] = geometry_d[0].data[k];
+                            fragment_d.data[k] = geometry_d[a].data[k];
                             break;
 
                         case interp_type::noperspective:
                             //interpolate using image-space barycentric coordinates
                             fragment_d.data[k] = (
-                                alpha * geometry_d[0].data[k] + 
-                                beta * geometry_d[1].data[k] + 
-                                gamma * geometry_d[2].data[k]
+                                alpha * geometry_d[a].data[k] + 
+                                beta * geometry_d[b].data[k] + 
+                                gamma * geometry_d[c].data[k]
                             );
+                            //std::cout << fragment_d.data[k] << std::endl;
                             break;
 
                         default:
+                            //std::cout << "Invalid interp_rules type" << std::endl;
                             break;
                     }
                 }
                 state.fragment_shader(fragment_d, output_d, state.uniform_data);
+                //std::cout << output_d.output_color << std::endl;
 
+                state.image_depth[i + j * w] = depth;
                 state.image_color[i + j * w] = make_pixel(output_d.output_color[0] * 255, output_d.output_color[1] * 255, output_d.output_color[2] * 255);
             }
         }
