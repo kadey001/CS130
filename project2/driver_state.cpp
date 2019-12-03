@@ -25,7 +25,6 @@ void initialize_render(driver_state& state, int width, int height)
         state.image_color[i] = make_pixel(0,0,0);
         state.image_depth[i] = 1;
     }
-    //std::cout<<"TODO: allocate and initialize state.image_depth."<<std::endl;
 }
 
 // This function will be called to render the data that has been stored in this class.
@@ -129,7 +128,6 @@ void render(driver_state& state, render_type type)
             std::cout << "Invalid Type" << std::endl;
         }
     }
-    //std::cout<<"TODO: implement rendering."<<std::endl;
 }
 
 // This function clips a triangle (defined by the three vertices in the "in" array).
@@ -138,86 +136,104 @@ void render(driver_state& state, render_type type)
 // simply pass the call on to rasterize_triangle.
 void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
 {
-    //TODO Finish triangle clipping
-    data_geometry geometry_d[3] = {(*in)[0], (*in)[1], (*in)[2]};
-    vec4 A = geometry_d[0].gl_Position;
-    vec4 B = geometry_d[1].gl_Position;
-    vec4 C = geometry_d[2].gl_Position;
-    //double lerp_factor_1, lerp_factor_2;
-    enum {x, y, z, w};
-
-    //data_geometry D1[3], D2[3];
-
-    //float A1, B1, B2;
-    //vec4 P1, P2;
-    
-    switch (face)
-    {
-    case 0:
-        //Left
-        // std::cout << A << std::endl;
-        // std::cout << B << std::endl;
-        // std::cout << C << std::endl;
-        if(A[x] >= -A[w] && B[x] >= -B[w] && C[x] >= -C[w]) {
-            //No clipping needed for left face
-            break;
-        } else if (A[x] < -A[w] && B[x] < -B[w] && C[x] < -C[w])  {
-            //Return since triangle is not inside at all, no need to rasterize
-            return;
-        } 
-        break;
-    case 1:
-        //Right
-        if(A[x] <= A[w] && B[x] <= B[w] && C[x] <= C[w]) {
-            //No clipping needed for right face
-            break;
-        } else if(A[x] > A[w] && B[x] > B[w] && C[x] > C[w]) {
-            //Return since triangle is not inside at all, no need to rasterize
-            return;
-        } 
-        break;
-    case 2:
-        //Top
-        if(A[y] <= A[w] && B[y] <= B[w] && C[y] <= C[w]) {
-            //No clipping needed for top face
-            break;
-        } else if(A[y] > A[w] && B[y] > B[w] && C[y] > C[w]) {
-            //Return since triangle is not inside at all, no need to rasterize
-            return;
-        } 
-        break;
-    case 3:
-        //Bottom
-        if(A[y] >= -A[w] && B[y] >= -B[w] && C[y] >= -C[w]) {
-            //No clipping needed for bottom face
-            break;
-        } else if (A[x] < -A[w] && B[x] < -B[w] && C[x] < -C[w])  {
-            //Return since triangle is not inside at all, no need to rasterize
-            return;
-        } 
-        break;
-    case 4:
-        //Front
-        if(A[z] <= A[w] && B[z] <= B[w] && C[y] <= C[w]) {
-            break;
-        } else if(A[z] > A[w] && B[z] > B[w] && C[z] > C[w]) {
-            return;
-        }
-        break;
-    case 5:
-        //Back
-        if(A[z] >= -A[w] && B[z] >= -B[w] && C[y] >= -C[w]) {
-            break;
-        } else if(A[z] < -A[w] && B[z] < -B[w] && C[z] < -C[w]) {
-            return;
-        }
-        break;
-    default:
+    if(face >= 6) {
         rasterize_triangle(state, in);
         return;
     }
-    //std::cout<<"TODO: implement clipping. (The current code passes the triangle through without clipping them.)"<<std::endl;
-    clip_triangle(state,in,face+1);
+
+    enum {x, y, z, w};
+    enum {a, b, c};
+
+    const data_geometry* triangle_geometry[3] = {in[a], in[b], in[c]};
+
+    vec4 A = in[a]->gl_Position;
+    vec4 B = in[b]->gl_Position;
+    vec4 C = in[c]->gl_Position;
+
+    float lerp_1, lerp_2;
+    vec4 P1, P2;
+
+    data_geometry geometry_d1[3], geometry_d2[3];
+    geometry_d1[a].data = new float[state.floats_per_vertex];
+    geometry_d1[b] = *in[b];
+    geometry_d1[c] = *in[c];
+
+    geometry_d2[a].data = new float[state.floats_per_vertex];
+    geometry_d2[b] = *in[b];
+    geometry_d2[c] = *in[c];
+
+
+    //Check if clipping is needed
+    if(A[z] < -A[w] && B[z] < -B[w] && C[z] < -C[w]) {
+        //All points outside so no need to clip
+        return;
+    } else if(A[z] < -A[w] && B[z] >= -B[w] && C[z] >= -C[w]) {
+        //Clip triangle and update interpolation
+        //A is outside
+        //Find lerp factors
+        lerp_1 = (-B[z] - B[w]) / (A[z] + A[w] - B[z] - B[w]);
+        lerp_2 = (-A[z] - A[w]) / (C[z] + C[w] - A[z] - A[w]);
+
+        //std::cout << lerp_1 << " " << lerp_2 << std::endl;
+
+        P1 = lerp_1 * A + (1 - lerp_1) * B;
+        P2 = lerp_2 * C + (1 - lerp_2) * A;
+
+        //std::cout << P1 << " " << P2 << std::endl;
+
+        for(size_t i = 0; i < state.floats_per_vertex; i++) {
+            //Update A<->C based on interpolation type
+            switch(state.interp_rules[i]) {
+                case interp_type::flat:
+                    geometry_d1[a].data[i] = in[a]->data[i];
+                    break;
+                case interp_type::noperspective:{
+                    float temp = lerp_2 * in[c]->gl_Position[w] / (lerp_2 * in[c]->gl_Position[w] + (1 - lerp_2) * in[a]->gl_Position[w]);
+                    //std::cout << temp << std::endl;
+                    geometry_d1[a].data[i] = temp * in[c]->data[i] + (1 - temp) * in[a]->data[i];
+                    //std::cout << geometry_d1[a].data[i] << std::endl;
+                    break;
+                }
+                case interp_type::smooth:
+                    geometry_d1[a].data[i] = lerp_2 * in[c]->data[i] + (1 - lerp_2) * in[a]->data[i];
+                    //std::cout << geometry_d1[a].data[i] << std::endl;
+                default:
+                    break;
+            }
+        }
+
+        geometry_d1[a].gl_Position = P2;
+        triangle_geometry[a] = &geometry_d1[a];
+        triangle_geometry[b] = &geometry_d1[b];
+        triangle_geometry[c] = &geometry_d1[c];
+
+        clip_triangle(state, triangle_geometry, face + 1);
+        
+        for(size_t i = 0; i < state.floats_per_vertex; i++) {
+            //Update A<->B based on interpolation type
+            switch(state.interp_rules[i]) {
+                case interp_type::flat:
+                    geometry_d2[a].data[i] = in[a]->data[i];
+                    break;
+                case interp_type::noperspective:{
+                    float temp = lerp_1 * in[a]->gl_Position[w] / (lerp_1 * in[a]->gl_Position[w] + (1 - lerp_1) * in[b]->gl_Position[w]);
+                    geometry_d2[a].data[i] = temp * in[a]->data[i] + (1 - temp) * in[b]->data[i];
+                    break;
+                }
+                case interp_type::smooth:
+                    geometry_d2[a].data[i] = lerp_1 * in[a]->data[i] + (1 - lerp_1) * in[b]->data[i];
+                default:
+                    break;
+            }
+        }
+
+        geometry_d2[a].gl_Position = P1;
+        triangle_geometry[a] = &geometry_d2[a];
+        triangle_geometry[b] = &geometry_d1[b];
+        triangle_geometry[c] = &geometry_d1[a];
+    }
+
+    clip_triangle(state, triangle_geometry, face + 1);
 }
 
 
