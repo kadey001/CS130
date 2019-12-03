@@ -143,13 +143,13 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
     vec4 A = geometry_d[0].gl_Position;
     vec4 B = geometry_d[1].gl_Position;
     vec4 C = geometry_d[2].gl_Position;
-    double lerp_factor_1, lerp_factor_2;
+    //double lerp_factor_1, lerp_factor_2;
     enum {x, y, z, w};
 
-    data_geometry D1[3], D2[3];
+    //data_geometry D1[3], D2[3];
 
-    float A1, B1, B2;
-    vec4 P1, P2;
+    //float A1, B1, B2;
+    //vec4 P1, P2;
     
     switch (face)
     {
@@ -164,55 +164,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
         } else if (A[x] < -A[w] && B[x] < -B[w] && C[x] < -C[w])  {
             //Return since triangle is not inside at all, no need to rasterize
             return;
-        } else {
-            //Figure out which points are outside
-            if(A[x] < -A[w] && B[x] >= -B[w] && C[x] >= -C[w]) {
-                //Only A outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-                lerp_factor_2 = (-C[w] - C[x]) / (A[x] + A[w] - C[w] - C[x]);
-
-                //vec4 new_p0 = lerp_factor_1 * A + (1 - lerp_factor_1) * B;
-                //vec4 new_p1 = lerp_factor_2 * A + (1 - lerp_factor_2) * C;
-                // vec4 Compute_Intersection(const float &beta, const vec4 &start_vertex, const vec4 &end_vertex)
-                // {
-                //     return beta * start_vertex + (1 - beta) * end_vertex;
-                // }
-
-                // vec4 new_p0 = Compute_Intersection(edges[0].beta, edges[0].start_vertex, edges[0].end_vertex);
-                // vec4 new_p1 = Compute_Intersection(edges[1].beta, edges[1].start_vertex, edges[1].end_vertex);
-                // data_geometry new_vertices0[3];
-                // data_geometry new_vertices1[3];
-                // vector<vector<data_geometry>> new_triangles;
-
-                // new_vertices0[0].data = new float[state.floats_per_vertex];
-                // Interpolate(state, edges[1], new_vertices0[0], 0, in);
-                // new_vertices0[0].gl_Position = new_p1;
-                // vector<data_geometry> new_tri0 = {new_vertices0[0], *in[1], *in[2]};
-                // new_triangles.emplace_back(new_tri0);     
-
-                // new_vertices1[0].data = new float[state.floats_per_vertex];
-                // Interpolate(state, edges[0], new_vertices1[0], 0, in);
-                // new_vertices1[0].gl_Position = new_p0;
-                // vector<data_geometry> new_tri1 = {new_vertices1[0], *in[1], new_vertices0[0]};
-                // new_triangles.emplace_back(new_tri1); 
-                //std::cout << lerp_factor_1 << std::endl;
-            } else if(A[x] >= -A[w] && B[x] < -B[w] && C[x] >= -C[w]) {
-                //Only B outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-            } else if(A[x] >= -A[w] && B[x] >= -B[w] && C[x] < -C[w]) {
-                //Only C outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-            } else if(A[x] < -A[w] && B[x] < -B[w] && C[x] >= -C[w]) {
-                //A and B outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-            } else if(A[x] < -A[w] && B[x] >= -B[w] && C[x] < -C[w]) {
-                //A and C outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-            } else if(A[x] >= -A[w] && B[x] < -B[w] && C[x] < -C[w]) {
-                //B and C outside
-                lerp_factor_1 = (-B[w] - B[x]) / (A[x] + A[w] - B[w] - B[x]);
-            }
-        }
+        } 
         break;
     case 1:
         //Right
@@ -222,24 +174,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
         } else if(A[x] > A[w] && B[x] > B[w] && C[x] > C[w]) {
             //Return since triangle is not inside at all, no need to rasterize
             return;
-        } else {
-            //Figure out which points are outside
-            if(A[x] <= A[w] && B[x] > B[w] && C[x] > C[w]) {
-                //Only A outside
-                lerp_factor_1 = (B[w] - B[x]) / (A[x] + A[w] + B[w] - B[x]);
-                //std::cout << lerp_factor_1 << std::endl;
-            } else if(A[x] <= A[w] && B[x] > B[w] && C[x] <= C[w]) {
-                //Only B outside
-            } else if(A[x] <= A[w] && B[x] <= B[w] && C[x] > C[w]) {
-                //Only C outside
-            } else if(A[x] > A[w] && B[x] > B[w] && C[x] <= C[w]) {
-                //A and B outside
-            } else if(A[x] > A[w] && B[x] <= B[w] && C[x] > C[w]) {
-                //A and C outside
-            } else if(A[x] <= A[w] && B[x] > B[w] && C[x] > C[w]) {
-                //B and C outside
-            }
-        }
+        } 
         break;
     case 2:
         //Top
@@ -249,24 +184,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
         } else if(A[y] > A[w] && B[y] > B[w] && C[y] > C[w]) {
             //Return since triangle is not inside at all, no need to rasterize
             return;
-        } else {
-            //Figure out which points are outside
-            if(A[y] <= A[w] && B[y] > B[w] && C[y] > C[w]) {
-                //Only A outside
-                lerp_factor_1 = (B[w] - B[y]) / (A[y] + A[w] + B[w] - B[y]);
-                //std::cout << lerp_factor_1 << std::endl;
-            } else if(A[y] <= A[w] && B[y] > B[w] && C[y] <= C[w]) {
-                //Only B outside
-            } else if(A[y] <= A[w] && B[y] <= B[w] && C[y] > C[w]) {
-                //Only C outside
-            } else if(A[y] > A[w] && B[y] > B[w] && C[y] <= C[w]) {
-                //A and B outside
-            } else if(A[y] > A[w] && B[y] <= B[w] && C[y] > C[w]) {
-                //A and C outside
-            } else if(A[y] <= A[w] && B[y] > B[w] && C[y] > C[w]) {
-                //B and C outside
-            }
-        }
+        } 
         break;
     case 3:
         //Bottom
@@ -276,24 +194,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
         } else if (A[x] < -A[w] && B[x] < -B[w] && C[x] < -C[w])  {
             //Return since triangle is not inside at all, no need to rasterize
             return;
-        } else {
-            //Figure out which points are outside
-            if(A[y] < -A[w] && B[y] >= -B[w] && C[y] >= -C[w]) {
-                //Only A outside
-                lerp_factor_1 = (-B[w] - B[y]) / (A[y] + A[w] - B[w] - B[y]);
-                //std::cout << lerp_factor_1 << std::endl;
-            } else if(A[y] >= -A[w] && B[y] < -B[w] && C[y] >= -C[w]) {
-                //Only B outside
-            } else if(A[y] >= -A[w] && B[y] >= -B[w] && C[y] < -C[w]) {
-                //Only C outside
-            } else if(A[y] < -A[w] && B[y] < -B[w] && C[y] >= -C[w]) {
-                //A and B outside
-            } else if(A[y] < -A[w] && B[y] >= -B[w] && C[y] < -C[w]) {
-                //A and C outside
-            } else if(A[y] >= -A[w] && B[y] < -B[w] && C[y] < -C[w]) {
-                //B and C outside
-            }
-        }
+        } 
         break;
     case 4:
         //Front
@@ -301,8 +202,6 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
             break;
         } else if(A[z] > A[w] && B[z] > B[w] && C[z] > C[w]) {
             return;
-        } else {
-
         }
         break;
     case 5:
@@ -311,15 +210,6 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
             break;
         } else if(A[z] < -A[w] && B[z] < -B[w] && C[z] < -C[w]) {
             return;
-        } else {
-            // if(A[z] < -A[w] && B[z] >= -B[w] && C[z] >= -C[w]) {
-                
-            // }
-            // D1[x].data = new float[state.floats_per_vertex];
-            // D1[y] = geometry_d[y];
-            // D1[z] = geometry_d[z];
-
-
         }
         break;
     default:
@@ -330,6 +220,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
     clip_triangle(state,in,face+1);
 }
 
+
 // Rasterize the triangle defined by the three vertices in the "in" array.  This
 // function is responsible for rasterization, interpolation of data to
 // fragments, calling the fragment shader, and z-buffering.
@@ -337,32 +228,33 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 {
     //How to access vertex data:
     //Find pointer to data from: (*in)[vertex].data + (0 for x axis, 1 for y axis)
+    //Or use in[vertex]->data[axis]
+    //Or in[vertex]->gl_Position[axis]
     //Must dereference address to get values
-
-    //Fill geometry_d with in for easier use/readability
-    data_geometry geometry_d[3] = {(*in)[0], (*in)[1], (*in)[2]};
+    //std::cout << *(*in)[1].data << std::endl;
+    //std::cout << in[1]->data << std::endl;
+    //std::cout << in[1]->gl_Position[0];
 
     //Get the w values for each vertex from geometry_d
-    float w0 = geometry_d[0].gl_Position[3];
-    float w1 = geometry_d[1].gl_Position[3];
-    float w2 = geometry_d[2].gl_Position[3];
+    float w0 = in[0]->gl_Position[3];
+    float w1 = in[1]->gl_Position[3];
+    float w2 = in[2]->gl_Position[3];
     //std::cout << w0 << w1 << w2 << std::endl;
 
     //Get each vertex coordinates divided by respective w
-    float x0 = geometry_d[0].gl_Position[0] / w0;
-    float x1 = geometry_d[1].gl_Position[0] / w1;
-    float x2 = geometry_d[2].gl_Position[0] / w2;
+    float x0 = in[0]->gl_Position[0] / w0;
+    float x1 = in[1]->gl_Position[0] / w1;
+    float x2 = in[2]->gl_Position[0] / w2;
     float x[] = {x0, x1, x2};
 
-    float y0 = geometry_d[0].gl_Position[1] / w0;
-    float y1 = geometry_d[1].gl_Position[1] / w1;
-    float y2 = geometry_d[2].gl_Position[1] / w2;
+    float y0 = in[0]->gl_Position[1] / w0;
+    float y1 = in[1]->gl_Position[1] / w1;
+    float y2 = in[2]->gl_Position[1] / w2;
     float y[] = {y0, y1, y2};
 
-    float z0 = geometry_d[0].gl_Position[2] / w0;
-    float z1 = geometry_d[1].gl_Position[2] / w1;
-    float z2 = geometry_d[2].gl_Position[2] / w2;
-    float z[] = {z0, z1, z2};
+    float z0 = in[0]->gl_Position[2] / w0;
+    float z1 = in[1]->gl_Position[2] / w1;
+    float z2 = in[2]->gl_Position[2] / w2;
 
     //std::cout << "X:" << x0 << " " << x1 << " " << x2 << std::endl;
     //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
@@ -370,14 +262,14 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 
     int w = state.image_width;
     int h = state.image_height;
-    int pixel_x[3], pixel_y[3];
-    int i, j;
-    float middle_w = w/2;
-    float middle_h = h/2;
+    float pixel_x[3], pixel_y[3];
+    float i, j;
+    float middle_w = w / 2.0;
+    float middle_h = h / 2.0;
     
     for(size_t iter = 0; iter < 3; iter++) {
-        i = (int)(middle_w * x[iter] + middle_w - .5);
-        j = (int)(middle_h * y[iter] + middle_h - .5);
+        i = middle_w * x[iter] + middle_w - .5;
+        j = middle_h * y[iter] + middle_h - .5;
         pixel_x[iter] = i;
         pixel_y[iter] = j;
         //state.image_color[i + j * w] = make_pixel(255, 255, 255);
@@ -385,10 +277,10 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 
     //Find the mins and maxes of triangle to check if it's in bounds and to reduce
     //pixels to check when rendering triangle.
-    int minimum_x = std::min(pixel_x[0], std::min(pixel_x[1], pixel_x[2]));
-    int maximum_x = std::max(pixel_x[0], std::max(pixel_x[1], pixel_x[2]));
-    int minimum_y = std::min(pixel_y[0], std::min(pixel_y[1], pixel_y[2]));
-    int maximum_y = std::max(pixel_y[0], std::max(pixel_y[1], pixel_y[2]));
+    float minimum_x = std::min(pixel_x[0], std::min(pixel_x[1], pixel_x[2]));
+    float maximum_x = std::max(pixel_x[0], std::max(pixel_x[1], pixel_x[2]));
+    float minimum_y = std::min(pixel_y[0], std::min(pixel_y[1], pixel_y[2]));
+    float maximum_y = std::max(pixel_y[0], std::max(pixel_y[1], pixel_y[2]));
     
     //Check to make sure that triangle is in bounds using max and min verticies
     //If the minimum vertex is less than zero or the maximum vertex is larger than
@@ -417,6 +309,10 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float part3 = (pixel_x[a] * pixel_y[b]) - (pixel_x[b] * pixel_y[a]);
     float triangle_area = .5 * (part1 - part2 + part3);
     //std::cout << triangle_area << std::endl;
+    // for(unsigned i = 0; i < 3; i++) {
+    //     std::cout << pixel_x[i] << std::endl;
+    //     std::cout << pixel_y[i] << std::endl;
+    // }
 
     float alpha, beta, gamma;
 
@@ -434,37 +330,37 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
             gamma = (.5 * (part3 + (pixel_y[a] - pixel_y[b]) * i + (pixel_x[b] - pixel_x[a]) * j) / triangle_area); 
 
             //Find depth for Z-Buffering
-            float depth = alpha * z[a] + beta * z[b] + gamma * z[c];
+            float depth = alpha * z0 + beta * z1 + gamma * z2;
 
             //Only render pixel when the point is inside of the triangle and 
-            if(alpha > 0 && beta > 0 && gamma > 0 && state.image_depth[i + j * w] > depth) {
-                data_fragment fragment_d;
+            if(alpha >= 0 && beta >= 0 && gamma >= 0 && state.image_depth[i + j * w] > depth) {
+                const float ALPHA = alpha;
+                const float BETA = beta;
+                const float GAMMA = gamma;
                 data_output output_d;
-                fragment_d.data = new float[MAX_FLOATS_PER_VERTEX];
+                data_fragment fragment_d;
+                fragment_d.data = new float[state.floats_per_vertex];
                 
                 //Interpolation
                 for (int k = 0; k < state.floats_per_vertex; k++) {
-                    const float ALPHA = alpha;
-                    const float BETA = beta;
-                    const float GAMMA = gamma;
                     float temp;
                     switch (state.interp_rules[k]) {
                         case interp_type::flat:
                             //Flat fragment shader
-                            fragment_d.data[k] = geometry_d[a].data[k];
+                            fragment_d.data[k] = in[a]->data[k];
                             break;
 
                         case interp_type::noperspective:
                             //interpolate using image-space barycentric coordinates
                             fragment_d.data[k] = (
-                                alpha * geometry_d[a].data[k] + 
-                                beta * geometry_d[b].data[k] + 
-                                gamma * geometry_d[c].data[k]
+                                alpha * in[a]->data[k] + 
+                                beta * in[b]->data[k] + 
+                                gamma * in[c]->data[k]
                             );
-                            //std::cout << fragment_d.data[k] << std::endl;
                             break;
 
                         case interp_type::smooth:
+                            //Perspective interpolation
                             temp = (ALPHA / w0) + (BETA / w1) + (GAMMA / w2);
                             
                             alpha = ALPHA / temp / w0;
@@ -472,14 +368,13 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
                             gamma = GAMMA / temp / w2;
 
                             fragment_d.data[k] = (
-                                alpha * geometry_d[a].data[k] + 
-                                beta * geometry_d[b].data[k] + 
-                                gamma * geometry_d[c].data[k]
+                                alpha * in[a]->data[k] + 
+                                beta * in[b]->data[k] + 
+                                gamma * in[c]->data[k]
                             );
                             break;
 
                         default:
-                            //std::cout << "Invalid interp_rules type" << std::endl;
                             break;
                     }
                 }
@@ -491,6 +386,4 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
             }
         }
     }
-
-    //std::cout<<"TODO: implement rasterization"<<std::endl;
 }
