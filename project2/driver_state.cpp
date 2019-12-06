@@ -130,13 +130,64 @@ void render(driver_state& state, render_type type)
     }
 }
 
+void interpolate_clipping(driver_state& state, const data_geometry* in[3], data_geometry(&geometry_d) [3], float& lerp, int& interp_case) {
+    enum {x, y, z, w};
+    enum {a, b, c};
+
+    switch(interp_case) {
+        case 0:
+            for(size_t i = 0; i < state.floats_per_vertex; i++) {
+                //Update A<->C based on interpolation type
+                switch(state.interp_rules[i]) {
+                    case interp_type::flat:
+                        geometry_d[a].data[i] = in[a]->data[i];
+                        break;
+                    case interp_type::noperspective:{
+                        float temp = lerp * in[c]->gl_Position[w] / (lerp * in[c]->gl_Position[w] + (1 - lerp) * in[a]->gl_Position[w]);
+                        //std::cout << temp << std::endl;
+                        geometry_d[a].data[i] = temp * in[c]->data[i] + (1 - temp) * in[a]->data[i];
+                        //std::cout << geometry_d1[a].data[i] << std::endl;
+                        break;
+                    }
+                    case interp_type::smooth:
+                        geometry_d[a].data[i] = lerp * in[c]->data[i] + (1 - lerp) * in[a]->data[i];
+                        //std::cout << geometry_d1[a].data[i] << std::endl;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case 1:
+            for(size_t i = 0; i < state.floats_per_vertex; i++) {
+            //Update A<->B based on interpolation type
+                switch(state.interp_rules[i]) {
+                    case interp_type::flat:
+                        geometry_d[a].data[i] = in[a]->data[i];
+                        break;
+                    case interp_type::noperspective:{
+                        float temp = lerp * in[a]->gl_Position[w] / (lerp * in[a]->gl_Position[w] + (1 - lerp) * in[b]->gl_Position[w]);
+                        geometry_d[a].data[i] = temp * in[a]->data[i] + (1 - temp) * in[b]->data[i];
+                        break;
+                    }
+                    case interp_type::smooth:
+                        geometry_d[a].data[i] = lerp * in[a]->data[i] + (1 - lerp) * in[b]->data[i];
+                    default:
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 // This function clips a triangle (defined by the three vertices in the "in" array).
 // It will be called recursively, once for each clipping face (face=0, 1, ..., 5) to
 // clip against each of the clipping faces in turn.  When face=6, clip_triangle should
 // simply pass the call on to rasterize_triangle.
 void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
 {
-    if(face >= 6) {
+    if(face == 6) {
         rasterize_triangle(state, in);
         return;
     }
@@ -150,6 +201,7 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
     vec4 B = in[b]->gl_Position;
     vec4 C = in[c]->gl_Position;
 
+    int interp_case = 0;
     float lerp_1, lerp_2;
     vec4 P1, P2;
 
@@ -162,7 +214,6 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
     geometry_d2[b] = *in[b];
     geometry_d2[c] = *in[c];
 
-
     //Check if clipping is needed
     if(A[z] < -A[w] && B[z] < -B[w] && C[z] < -C[w]) {
         //All points outside so no need to clip
@@ -171,63 +222,32 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
         //Clip triangle and update interpolation
         //A is outside
         //Find lerp factors
-        lerp_1 = (-B[z] - B[w]) / (A[z] + A[w] - B[z] - B[w]);
-        lerp_2 = (-A[z] - A[w]) / (C[z] + C[w] - A[z] - A[w]);
+        lerp_1 = (-A[z] - A[w]) / (C[z] + C[w] - A[z] - A[w]);
+        lerp_2 = (-B[z] - B[w]) / (A[z] + A[w] - B[z] - B[w]);
 
         //std::cout << lerp_1 << " " << lerp_2 << std::endl;
 
-        P1 = lerp_1 * A + (1 - lerp_1) * B;
-        P2 = lerp_2 * C + (1 - lerp_2) * A;
+        P1 = lerp_1 * C + (1 - lerp_1) * A;
+        P2 = lerp_2 * A + (1 - lerp_2) * B;
 
         //std::cout << P1 << " " << P2 << std::endl;
 
-        for(size_t i = 0; i < state.floats_per_vertex; i++) {
-            //Update A<->C based on interpolation type
-            switch(state.interp_rules[i]) {
-                case interp_type::flat:
-                    geometry_d1[a].data[i] = in[a]->data[i];
-                    break;
-                case interp_type::noperspective:{
-                    float temp = lerp_2 * in[c]->gl_Position[w] / (lerp_2 * in[c]->gl_Position[w] + (1 - lerp_2) * in[a]->gl_Position[w]);
-                    //std::cout << temp << std::endl;
-                    geometry_d1[a].data[i] = temp * in[c]->data[i] + (1 - temp) * in[a]->data[i];
-                    //std::cout << geometry_d1[a].data[i] << std::endl;
-                    break;
-                }
-                case interp_type::smooth:
-                    geometry_d1[a].data[i] = lerp_2 * in[c]->data[i] + (1 - lerp_2) * in[a]->data[i];
-                    //std::cout << geometry_d1[a].data[i] << std::endl;
-                default:
-                    break;
-            }
-        }
+        //Interpolate geometry data
+        interpolate_clipping(state, in, geometry_d1, lerp_1, interp_case);
 
-        geometry_d1[a].gl_Position = P2;
+        geometry_d1[a].gl_Position = P1;
         triangle_geometry[a] = &geometry_d1[a];
         triangle_geometry[b] = &geometry_d1[b];
         triangle_geometry[c] = &geometry_d1[c];
 
         clip_triangle(state, triangle_geometry, face + 1);
-        
-        for(size_t i = 0; i < state.floats_per_vertex; i++) {
-            //Update A<->B based on interpolation type
-            switch(state.interp_rules[i]) {
-                case interp_type::flat:
-                    geometry_d2[a].data[i] = in[a]->data[i];
-                    break;
-                case interp_type::noperspective:{
-                    float temp = lerp_1 * in[a]->gl_Position[w] / (lerp_1 * in[a]->gl_Position[w] + (1 - lerp_1) * in[b]->gl_Position[w]);
-                    geometry_d2[a].data[i] = temp * in[a]->data[i] + (1 - temp) * in[b]->data[i];
-                    break;
-                }
-                case interp_type::smooth:
-                    geometry_d2[a].data[i] = lerp_1 * in[a]->data[i] + (1 - lerp_1) * in[b]->data[i];
-                default:
-                    break;
-            }
-        }
 
-        geometry_d2[a].gl_Position = P1;
+        interp_case = 1;
+
+        //Interpolate geometry data
+        interpolate_clipping(state, in, geometry_d2, lerp_2, interp_case);
+
+        geometry_d2[a].gl_Position = P2;
         triangle_geometry[a] = &geometry_d2[a];
         triangle_geometry[b] = &geometry_d1[b];
         triangle_geometry[c] = &geometry_d1[a];
@@ -236,12 +256,58 @@ void clip_triangle(driver_state& state, const data_geometry* in[3], int face)
     clip_triangle(state, triangle_geometry, face + 1);
 }
 
+void interpolate_pixels(driver_state& state, const data_geometry* in[3], data_output& output_d, data_fragment& fragment_d, float& alpha, float& beta, float& gamma, float(&w) [3]) {
+    enum {a, b, c};
+    const float ALPHA = alpha;
+    const float BETA = beta;
+    const float GAMMA = gamma;
+    
+    //Interpolation
+    for (int k = 0; k < state.floats_per_vertex; k++) {
+        float temp;
+        switch (state.interp_rules[k]) {
+            case interp_type::flat:
+                //Flat fragment shader
+                fragment_d.data[k] = in[a]->data[k];
+                break;
+
+            case interp_type::noperspective:
+                //interpolate using image-space barycentric coordinates
+                fragment_d.data[k] = (
+                    alpha * in[a]->data[k] + 
+                    beta * in[b]->data[k] + 
+                    gamma * in[c]->data[k]
+                );
+                break;
+
+            case interp_type::smooth:
+                //Perspective interpolation
+                temp = (ALPHA / w[0]) + (BETA / w[1]) + (GAMMA / w[2]);
+                
+                alpha = ALPHA / temp / w[0];
+                beta = BETA / temp / w[1];
+                gamma = GAMMA / temp / w[2];
+
+                fragment_d.data[k] = (
+                    alpha * in[a]->data[k] + 
+                    beta * in[b]->data[k] + 
+                    gamma * in[c]->data[k]
+                );
+                break;
+
+            default:
+                break;
+        }
+    }
+}
+
 
 // Rasterize the triangle defined by the three vertices in the "in" array.  This
 // function is responsible for rasterization, interpolation of data to
 // fragments, calling the fragment shader, and z-buffering.
 void rasterize_triangle(driver_state& state, const data_geometry* in[3])
 {
+    enum {a, b, c};
     //How to access vertex data:
     //Find pointer to data from: (*in)[vertex].data + (0 for x axis, 1 for y axis)
     //Or use in[vertex]->data[axis]
@@ -255,6 +321,7 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     float w0 = in[0]->gl_Position[3];
     float w1 = in[1]->gl_Position[3];
     float w2 = in[2]->gl_Position[3];
+    float w[] = {w0, w1, w2};
     //std::cout << w0 << w1 << w2 << std::endl;
 
     //Get each vertex coordinates divided by respective w
@@ -276,12 +343,12 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     //std::cout << "Y:" << y0 << " " << y1 << " " << y2 << std::endl;
     //std::cout << "Z:" << z0 << " " << z1 << " " << z2 << std::endl;
 
-    int w = state.image_width;
-    int h = state.image_height;
+    int width = state.image_width;
+    int height = state.image_height;
     float pixel_x[3], pixel_y[3];
     float i, j;
-    float middle_w = w / 2.0;
-    float middle_h = h / 2.0;
+    float middle_w = width / 2.0;
+    float middle_h = height / 2.0;
     
     for(size_t iter = 0; iter < 3; iter++) {
         i = middle_w * x[iter] + middle_w - .5;
@@ -305,21 +372,20 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
     if(minimum_x < 0){
         minimum_x = 0;
     }
-    if(maximum_x > w){
-        maximum_x = w;
+    if(maximum_x > width){
+        maximum_x = width;
     }
     if(minimum_y < 0){
         minimum_y = 0;
     }
-    if(maximum_y > h){
-        maximum_y = h;
+    if(maximum_y > height){
+        maximum_y = height;
     }
 
     //Calculate area of triangle to use barycentric coordinates
     //Area(abc) = .5 * ((BxCy - CxBy)-(AxCy - CxAy)-(AxBy - BxAy))
     //Broke up into parts and used enum for readability.
     //(Parts also useful in barycentric coordinate calculations)
-    enum {a, b, c};
     float part1 = (pixel_x[b] * pixel_y[c]) - (pixel_x[c] * pixel_y[b]);
     float part2 = (pixel_x[a] * pixel_y[c]) - (pixel_x[c] * pixel_y[a]);
     float part3 = (pixel_x[a] * pixel_y[b]) - (pixel_x[b] * pixel_y[a]);
@@ -349,56 +415,19 @@ void rasterize_triangle(driver_state& state, const data_geometry* in[3])
             float depth = alpha * z0 + beta * z1 + gamma * z2;
 
             //Only render pixel when the point is inside of the triangle and 
-            if(alpha >= 0 && beta >= 0 && gamma >= 0 && state.image_depth[i + j * w] > depth) {
-                const float ALPHA = alpha;
-                const float BETA = beta;
-                const float GAMMA = gamma;
+            if(alpha >= 0 && beta >= 0 && gamma >= 0 && state.image_depth[i + j * width] > depth) {
                 data_output output_d;
                 data_fragment fragment_d;
                 fragment_d.data = new float[state.floats_per_vertex];
                 
                 //Interpolation
-                for (int k = 0; k < state.floats_per_vertex; k++) {
-                    float temp;
-                    switch (state.interp_rules[k]) {
-                        case interp_type::flat:
-                            //Flat fragment shader
-                            fragment_d.data[k] = in[a]->data[k];
-                            break;
-
-                        case interp_type::noperspective:
-                            //interpolate using image-space barycentric coordinates
-                            fragment_d.data[k] = (
-                                alpha * in[a]->data[k] + 
-                                beta * in[b]->data[k] + 
-                                gamma * in[c]->data[k]
-                            );
-                            break;
-
-                        case interp_type::smooth:
-                            //Perspective interpolation
-                            temp = (ALPHA / w0) + (BETA / w1) + (GAMMA / w2);
-                            
-                            alpha = ALPHA / temp / w0;
-                            beta = BETA / temp / w1;
-                            gamma = GAMMA / temp / w2;
-
-                            fragment_d.data[k] = (
-                                alpha * in[a]->data[k] + 
-                                beta * in[b]->data[k] + 
-                                gamma * in[c]->data[k]
-                            );
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
+                interpolate_pixels(state, in, output_d, fragment_d, alpha, beta, gamma, w);
+                
                 state.fragment_shader(fragment_d, output_d, state.uniform_data);
                 //std::cout << output_d.output_color << std::endl;
 
-                state.image_depth[i + j * w] = depth;
-                state.image_color[i + j * w] = make_pixel(output_d.output_color[0] * 255, output_d.output_color[1] * 255, output_d.output_color[2] * 255);
+                state.image_depth[i + j * width] = depth;
+                state.image_color[i + j * width] = make_pixel(output_d.output_color[0] * 255, output_d.output_color[1] * 255, output_d.output_color[2] * 255);
             }
         }
     }

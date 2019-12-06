@@ -72,8 +72,8 @@ void application::draw_line_DDA(int x0, int y0, int x1, int y1, const vec3& line
 // https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm/
 void application::draw_line_MPA(int x0, int y0, int x1, int y1, const vec3& linecolor)
 {
-    // TODO: NOT WORKING CODE (PUT BETTER CODE HERE!!)
-    if(abs(y1 - y0) < abs(x1 - x0)) {
+    //Compare dx and dy
+    if(abs(x1 - x0) > abs(y1 - y0)) {
         if(x0 > x1) {
             draw_line_MPA_low(x1, y1, x0, y0, linecolor);
         } else {
@@ -86,11 +86,6 @@ void application::draw_line_MPA(int x0, int y0, int x1, int y1, const vec3& line
             draw_line_MPA_high(x0, y0, x1, y1, linecolor);
         }
     }
-
-    // float m = dy/dx;
-    // float b = y0 - m*x0;
-    // for(int x = x0; x < x1; ++x)
-    //       set_pixel(x, m*x + b,linecolor);
 }
 
 void application::draw_line_MPA_low(int x0, int y0, int x1, int y1, const vec3& linecolor) {
